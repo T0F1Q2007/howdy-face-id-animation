@@ -1,0 +1,45 @@
+/* MAIN CONTAINER */
+.faceid-main-container {
+    width: 100px;
+    height: 100px;
+}
+
+/* THE FRAME: Use your own SVG background here! */
+.faceid-frame {
+    width: 100px;
+    height: 100px;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    
+    /* TO USE AN IMAGE:
+    background-image: url('file:///path/to/your/design.svg');
+    background-size: contain;
+    border: none;
+    */
+}
+
+.faceid-frame.success {
+    border-color: #34d399 !important;
+    background-color: rgba(52, 211, 153, 0.1);
+}
+
+/* THE SCAN LINE */
+.faceid-scanline {
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(to right, 
+        transparent, 
+        rgba(255, 255, 255, 0.8), 
+        transparent
+    );
+    x-align: CENTER;
+    border-radius: 2px;
+}
+
+/* SUCCESS CHECKMARK */
+.faceid-checkmark {
+    color: #34d399;
+    icon-size: 48px;
+    x-align: CENTER;
+    y-align: CENTER;
+}

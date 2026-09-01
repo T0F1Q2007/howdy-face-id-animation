@@ -1,0 +1,14 @@
+{
+  "name": "Howdy Face ID Animation",
+  "description": "Displays an elegant Face ID-style animation during Howdy facial recognition authentication",
+  "uuid": "faceidanimation@toowfeeq",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "version": 1
+}
