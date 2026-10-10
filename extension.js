@@ -151,12 +151,14 @@ class FaceIDCanvasEngineFinal extends St.DrawingArea {
     }
 });
 
-const FaceIDContainer = GObject.registerClass(
-class FaceIDContainer extends St.BoxLayout {
+const FaceIDContainerV2 = GObject.registerClass(
+class FaceIDContainerV2 extends St.Widget {
     _init() {
         super._init({
             style_class: 'faceid-container',
-            vertical: true,
+            layout_manager: new Clutter.BoxLayout({
+                orientation: Clutter.Orientation.VERTICAL
+            }),
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             reactive: false,
@@ -279,7 +281,7 @@ export default class HowdyFaceIDExtension extends Extension {
         if (!this._enabled) return;
 
         if (!this._container) {
-            this._container = new FaceIDContainer();
+            this._container = new FaceIDContainerV2();
             Main.layoutManager.addChrome(this._container, {
                 affectsStruts: false,
                 trackFullscreen: true,
