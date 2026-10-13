@@ -71,35 +71,33 @@ User Invocation / Sudo / Polkit / Lock Screen
 
 ---
 
-## 3. Procedural Vector Engine & Visual Layout
+## 3. Visual Presentation & Motion Architecture
 
-The presentation layer avoids pre-rendered raster assets to guarantee resolution independence across arbitrary fractional scaling configurations and high-DPI displays. The rendering surface floats with zero background card occlusion, eliminating intrusive shadows while displaying exclusively the active biometric vector glyph.
+The presentation layer utilizes composited Clutter actors styled via hardware-accelerated CSS and implicit animation curves. The interface operates with transparent stage chrome, eliminating intrusive backgrounds while rendering the biometric scanning ring and rotating beam elements directly onto the display.
 
 ```
-       (-size, -size+14)                 (size-14, -size)
-              +---------+               +---------+
-             /   o   o   \             /           \
-            |  (.)   (.)  |           |     \   /   |
-            |     \---/   |           |      \_/    |
-            +-------------+           +-------------+
-         [Volumetric Light Sweep]    [Parametric Emerald Check]
+                  .-----------------.
+                 /   .-----------.   \
+                /   /      |      \   \
+               |   |   ----+----   |   |
+                \   \      |      /   /
+                 \   '-----------'   /
+                  '-----------------'
+               [Pulsing Harmonic Ring]
+            [Rotating Crosshair Scanbeams]
 ```
 
-### 3.1 Geometric Formulations
+### 3.1 Motion Kinetics and Visual Components
 
-1. **Quadrant Bezier Generation**: Four orthogonal corner brackets computed via rotations $\theta_i = i \cdot \frac{\pi}{2}$ for $i \in \{0, 1, 2, 3\}$.
-2. **Harmonic Bracket Breathing**:
-   $$\text{offset}(\phi) = \sin(\phi \cdot 1.8) \cdot 1.6$$
-   where phase parameter $\phi \leftarrow \phi + 0.055$ updates per animation tick.
-3. **Three-Dimensional Parallax Depth**:
-   $$\Delta x = \sin(\phi \cdot 1.3) \cdot 2.4, \quad \Delta y = \cos(\phi \cdot 0.95) \cdot 1.6$$
-   Facial features and depth landmarks translate proportionally to simulate spatial sensor acquisition.
-4. **Volumetric Radiant Light Sweep**:
-   $$y_{\text{wave}}(\phi) = \sin(\phi \cdot 1.6) \cdot 26.0$$
-   A radiant linear gradient field dynamically illuminates intersecting facial contours, capsule eye nodes, and landmark vertices.
-5. **Parametric Verification Easing**:
-   $$s(t) = 1.0 + \sin\left(\left(1 - (1 - t)^3\right) \cdot \pi\right) \cdot 0.12$$
-   Upon successful verification, the glyph performs an elastic spring expansion, dynamically tracing the emerald checkmark contour alongside an expanding confirmation pulse.
+1. **Outer Harmonic Ring (`.howdy-faceid-ring`)**:
+   - Circular bounding geometry ($120 \times 120$ px) featuring dual radial gradient glow and drop shadow illumination.
+   - Smooth scale harmonic breathing ($\text{scale} \in [1.0, 1.15]$, $\text{opacity} \in [180, 255]$) orchestrated via `Clutter.AnimationMode.EASE_IN_OUT_SINE` over 800ms intervals.
+2. **Core Biometric Luminescence (`.howdy-faceid-glow`)**:
+   - Concentric luminous kernel ($100 \times 100$ px) oscillating between $100$ and $255$ alpha opacity over 600ms cycles.
+3. **Rotating Scanning Beams (`.howdy-faceid-scanline`)**:
+   - Orthogonal dual-axis scanlines executing continuous $180^\circ$ angular z-axis rotations (`rotation_angle_z`) modulated via `Clutter.AnimationMode.EASE_OUT_CUBIC` over 1200ms intervals.
+4. **Verified State Transition**:
+   - Upon Howdy authentication confirmation, the ring actor adopts the `.success` state class, triggering an emerald color shift (`#34d399`) and an elastic confirmation pulse.
 
 ---
 
@@ -107,10 +105,10 @@ The presentation layer avoids pre-rendered raster assets to guarantee resolution
 
 | State | Transition Trigger | Active Subsystems | Duration / Exit Criteria |
 |---|---|---|---|
-| **IDLE** | System quiescent | `Gio.FileMonitor` on `/run/user/<UID>/howdy_status` | Status file mutation |
-| **SCANNING** | Status token = `"start"` | 60 Hz GLib timer (`_tickId`), Cairo draw loop, Primary monitor alignment | Status file token update or 7000ms safety timeout |
-| **VERIFIED** | Status token = `"success"` | Parametric checkmark interpolation, emerald pulse ring, spring scale | 1500ms timer (`_successTimeoutId`) |
-| **DISMISSAL** | Status token = `"stop"` or timeout | Clutter opacity ease (250ms duration, `EASE_IN_QUAD`) | Stage chrome removal and actor destruction |
+| **IDLE** | System quiescent | `Gio.FileMonitor` on `/run/user/<UID>/howdy_status` & polling fallback | Status file mutation or process detection |
+| **SCANNING** | Status token = `"start"` or Howdy process | Clutter pulse and scanline rotation timelines, Primary monitor alignment | Status token update or 7500ms safety timeout |
+| **VERIFIED** | Status token = `"success"` | Emerald glow transition, elastic spring pulse | 1000ms timer (`_successTimeoutId`) |
+| **DISMISSAL** | Status token = `"stop"` or timeout | Clutter opacity ease (200ms duration, `EASE_IN_QUAD`) | Stage chrome removal and actor destruction |
 
 ---
 
