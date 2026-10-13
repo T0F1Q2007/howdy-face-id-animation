@@ -73,30 +73,33 @@ User Invocation / Sudo / Polkit / Lock Screen
 
 ## 3. Procedural Vector Engine & Visual Layout
 
-The presentation layer avoids pre-rendered raster assets to guarantee resolution independence across arbitrary fractional scaling configurations and high-DPI displays.
+The presentation layer avoids pre-rendered raster assets to guarantee resolution independence across arbitrary fractional scaling configurations and high-DPI displays. The rendering surface floats with zero background card occlusion, eliminating intrusive shadows while displaying exclusively the active biometric vector glyph.
 
 ```
-       (-size, -size+20)                 (size-20, -size)
+       (-size, -size+14)                 (size-14, -size)
               +---------+               +---------+
-             /           \             /           \
-            |    (.) (.)  |           |     [v]     |
-            |     \---/   |           |             |
+             /   o   o   \             /           \
+            |  (.)   (.)  |           |     \   /   |
+            |     \---/   |           |      \_/    |
             +-------------+           +-------------+
-        [Scanning / Cyan Laser]      [Verified / Emerald Check]
+         [Volumetric Light Sweep]    [Parametric Emerald Check]
 ```
 
 ### 3.1 Geometric Formulations
 
 1. **Quadrant Bezier Generation**: Four orthogonal corner brackets computed via rotations $\theta_i = i \cdot \frac{\pi}{2}$ for $i \in \{0, 1, 2, 3\}$.
 2. **Harmonic Bracket Breathing**:
-   $$\text{offset}(\phi, i) = \sin(\phi + i) \cdot 2.5$$
-   where phase parameter $\phi \leftarrow \phi + 0.08$ updates per animation tick.
-3. **Biometric Scan Sweep**:
-   $$y_{\text{beam}}(\phi) = \sin(1.5 \cdot \phi) \cdot 18.0, \quad x \in [-22, 22]$$
-4. **Target Color Calibration**:
-   - Idle / Scanning Brackets: $\text{RGBA}(1.0, 1.0, 1.0, 0.95)$
-   - Biometric Laser Beam: $\text{RGBA}(0.35, 0.82, 1.0, 0.85)$
-   - Verified Checkmark & Brackets: $\text{RGBA}(0.2, 0.83, 0.55, 1.0)$ (`#34d399`)
+   $$\text{offset}(\phi) = \sin(\phi \cdot 1.8) \cdot 1.6$$
+   where phase parameter $\phi \leftarrow \phi + 0.055$ updates per animation tick.
+3. **Three-Dimensional Parallax Depth**:
+   $$\Delta x = \sin(\phi \cdot 1.3) \cdot 2.4, \quad \Delta y = \cos(\phi \cdot 0.95) \cdot 1.6$$
+   Facial features and depth landmarks translate proportionally to simulate spatial sensor acquisition.
+4. **Volumetric Radiant Light Sweep**:
+   $$y_{\text{wave}}(\phi) = \sin(\phi \cdot 1.6) \cdot 26.0$$
+   A radiant linear gradient field dynamically illuminates intersecting facial contours, capsule eye nodes, and landmark vertices.
+5. **Parametric Verification Easing**:
+   $$s(t) = 1.0 + \sin\left(\left(1 - (1 - t)^3\right) \cdot \pi\right) \cdot 0.12$$
+   Upon successful verification, the glyph performs an elastic spring expansion, dynamically tracing the emerald checkmark contour alongside an expanding confirmation pulse.
 
 ---
 
@@ -106,7 +109,7 @@ The presentation layer avoids pre-rendered raster assets to guarantee resolution
 |---|---|---|---|
 | **IDLE** | System quiescent | `Gio.FileMonitor` on `/run/user/<UID>/howdy_status` | Status file mutation |
 | **SCANNING** | Status token = `"start"` | 60 Hz GLib timer (`_tickId`), Cairo draw loop, Primary monitor alignment | Status file token update or 7000ms safety timeout |
-| **VERIFIED** | Status token = `"success"` | Green checkmark stroke, emerald style classes, "Verified" badge | 1200ms timer (`_successTimeoutId`) |
+| **VERIFIED** | Status token = `"success"` | Parametric checkmark interpolation, emerald pulse ring, spring scale | 1500ms timer (`_successTimeoutId`) |
 | **DISMISSAL** | Status token = `"stop"` or timeout | Clutter opacity ease (250ms duration, `EASE_IN_QUAD`) | Stage chrome removal and actor destruction |
 
 ---

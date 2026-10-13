@@ -41,12 +41,13 @@ class FaceIDCanvasEngineFinal extends St.DrawingArea {
     _init() {
         super._init({
             style_class: 'faceid-canvas',
-            width: 90,
-            height: 90,
+            width: 120,
+            height: 120,
             reactive: false,
         });
         this._phase = 0;
         this._isSuccess = false;
+        this._successProgress = 0.0;
     }
 
     vfunc_repaint() {
@@ -58,95 +59,249 @@ class FaceIDCanvasEngineFinal extends St.DrawingArea {
         cr.paint();
         cr.setOperator(Cairo.Operator.OVER);
 
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const size = 32;
+        const cx = width / 2;
+        const cy = height / 2;
+        const scaleFactor = Math.min(width, height) / 120;
 
         cr.save();
-        cr.translate(centerX, centerY);
+        cr.translate(cx, cy);
+        cr.scale(scaleFactor, scaleFactor);
+
+        // Dynamic scale spring
+        let scale = 1.0;
+        if (this._isSuccess) {
+            const ease = 1 - Math.pow(1 - this._successProgress, 3);
+            scale = 1.0 + Math.sin(ease * Math.PI) * 0.12;
+        } else {
+            scale = 1.0 + Math.sin(this._phase * 1.8) * 0.025;
+        }
+        cr.scale(scale, scale);
 
         // ── 1. Corner Framing Brackets ──────────────────────────────────────
-        cr.setLineWidth(3.5);
+        cr.setLineWidth(3.2);
         cr.setLineCap(Cairo.LineCap.ROUND);
         cr.setLineJoin(Cairo.LineJoin.ROUND);
 
         if (this._isSuccess) {
-            cr.setSourceRGBA(0.2, 0.83, 0.55, 1.0);
+            cr.setSourceRGBA(0.20, 0.86, 0.44, 1.0);
         } else {
-            cr.setSourceRGBA(1.0, 1.0, 1.0, 0.95);
+            cr.setSourceRGBA(1.0, 1.0, 1.0, 0.94);
         }
+
+        const boxSize = 36;
+        const cornerR = this._isSuccess ? 13 : 14 + Math.sin(this._phase * 1.4) * 0.8;
+        const legLen = 14;
 
         for (let i = 0; i < 4; i++) {
             cr.save();
             cr.rotate(i * HALF_PI);
-
-            const offset = this._isSuccess ? 0 : Math.sin(this._phase + i) * 2.5;
-            const cornerRadius = 14 + offset;
-
-            cr.moveTo(-size, -size + 20);
-            cr.lineTo(-size, -size + cornerRadius);
-            cr.arc(-size + cornerRadius, -size + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
-            cr.lineTo(-size + 20, -size);
+            cr.moveTo(-boxSize, -boxSize + legLen);
+            cr.lineTo(-boxSize, -boxSize + cornerR);
+            cr.arc(-boxSize + cornerR, -boxSize + cornerR, cornerR, Math.PI, 1.5 * Math.PI);
+            cr.lineTo(-boxSize + legLen, -boxSize);
             cr.stroke();
-
             cr.restore();
         }
 
-        if (!this._isSuccess) {
-            // ── 2. Biometric Facial Glyph (Scanning Mode) ───────────────────
-            cr.setLineWidth(2.0);
-            cr.setSourceRGBA(1.0, 1.0, 1.0, 0.55);
+        // ── 2. Biometric Facial Anatomy (Scanning Phase) ────────────────────
+        if (!this._isSuccess || this._successProgress < 0.45) {
+            const faceAlpha = this._isSuccess ? Math.max(0, 1.0 - this._successProgress / 0.45) : 1.0;
 
-            // Eyes
-            const blinkScale = 0.85 + 0.15 * Math.cos(this._phase * 0.9);
-            cr.save();
-            cr.scale(1.0, blinkScale);
-            cr.arc(-11, -7 / blinkScale, 2.8, 0, 2 * Math.PI);
-            cr.arc(11, -7 / blinkScale, 2.8, 0, 2 * Math.PI);
-            cr.fill();
-            cr.restore();
+            // 3D Parallax Tilt (TrueDepth scanning perception)
+            const tiltX = Math.sin(this._phase * 1.3) * 2.4;
+            const tiltY = Math.cos(this._phase * 0.95) * 1.6;
 
-            // Smile
+            // Vertical scan sweep coordinate
+            const waveY = Math.sin(this._phase * 1.6) * 26;
+            const waveDist = (y) => Math.abs(y - waveY);
+
+            // Biometric Depth Landmarks Matrix
+            const landmarks = [
+                { x: 0, y: -20, depth: 0.8 },
+                { x: -16, y: -14, depth: 0.9 },
+                { x: 16, y: -14, depth: 0.9 },
+                { x: -16, y: 3, depth: 1.1 },
+                { x: 16, y: 3, depth: 1.1 },
+                { x: 0, y: 1, depth: 1.3 },
+                { x: -10, y: 19, depth: 1.0 },
+                { x: 10, y: 19, depth: 1.0 },
+                { x: 0, y: 22, depth: 0.9 },
+            ];
+
+            // Soft Triangulation Mesh Connections
             cr.save();
-            cr.setLineWidth(2.2);
-            cr.moveTo(-11, 8);
-            cr.curveTo(-6, 14, 6, 14, 11, 8);
+            cr.setLineWidth(1.0);
+            cr.setSourceRGBA(0.35, 0.82, 1.0, 0.12 * faceAlpha);
+            const connections = [
+                [0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5], [3, 6], [4, 7], [6, 8], [7, 8]
+            ];
+            for (const [i1, i2] of connections) {
+                const p1 = landmarks[i1];
+                const p2 = landmarks[i2];
+                cr.moveTo(p1.x + tiltX * p1.depth, p1.y + tiltY * p1.depth);
+                cr.lineTo(p2.x + tiltX * p2.depth, p2.y + tiltY * p2.depth);
+            }
             cr.stroke();
+
+            // Biometric Node Points
+            for (const pt of landmarks) {
+                const px = pt.x + tiltX * pt.depth;
+                const py = pt.y + tiltY * pt.depth;
+                const dist = Math.abs(py - waveY);
+                const isNearWave = dist < 8.5;
+                const dotAlpha = (isNearWave ? 0.92 : 0.26) * faceAlpha;
+                const dotRadius = isNearWave ? 2.2 : 1.2;
+
+                cr.setSourceRGBA(0.35, 0.85, 1.0, dotAlpha);
+                cr.arc(px, py, dotRadius, 0, 2 * Math.PI);
+                cr.fill();
+            }
             cr.restore();
 
-            // ── 3. Cyan Laser Scanning Beam ─────────────────────────────────
-            const beamY = Math.sin(this._phase * 1.5) * 18;
+            // Sonar / Radar Pulse Wave
+            const pulseR = ((this._phase * 9) % 46) + 6;
+            const pulseAlpha = Math.max(0, (1 - pulseR / 46) * 0.22) * faceAlpha;
+            if (pulseAlpha > 0.01) {
+                cr.save();
+                cr.setLineWidth(1.4);
+                cr.setSourceRGBA(0.35, 0.82, 1.0, pulseAlpha);
+                cr.arc(0, 0, pulseR, 0, 2 * Math.PI);
+                cr.stroke();
+                cr.restore();
+            }
+
+            // Eyes (Pill Capsules with Dynamic Blinking & Luminance)
+            const blinkCycle = (this._phase * 0.28) % (Math.PI * 2);
+            const eyeScaleY = blinkCycle > 5.9 ? Math.max(0.12, Math.sin((blinkCycle - 5.9) / 0.38 * Math.PI)) : 1.0;
+
+            for (const eyeSign of [-1, 1]) {
+                const eyeX = eyeSign * 11 + tiltX;
+                const eyeY = -7 + tiltY;
+                const dist = waveDist(eyeY);
+                const isIlluminated = dist < 9;
+
+                cr.save();
+                cr.translate(eyeX, eyeY);
+                cr.scale(1.0, eyeScaleY);
+
+                if (isIlluminated) {
+                    cr.setSourceRGBA(0.55, 0.92, 1.0, 0.98 * faceAlpha);
+                } else {
+                    cr.setSourceRGBA(1.0, 1.0, 1.0, 0.86 * faceAlpha);
+                }
+
+                cr.arc(0, -2.2, 2.3, Math.PI, 0);
+                cr.arc(0, 2.2, 2.3, 0, Math.PI);
+                cr.closePath();
+                cr.fill();
+                cr.restore();
+            }
+
+            // Subtle Nose Bridge Tick
             cr.save();
-            cr.setLineWidth(2.5);
+            cr.setLineWidth(1.8);
             cr.setLineCap(Cairo.LineCap.ROUND);
-            cr.setSourceRGBA(0.35, 0.82, 1.0, 0.85);
-            cr.moveTo(-22, beamY);
-            cr.lineTo(22, beamY);
+            cr.setSourceRGBA(1.0, 1.0, 1.0, 0.45 * faceAlpha);
+            cr.moveTo(tiltX * 1.1, -1 + tiltY);
+            cr.lineTo(tiltX * 1.1, 2.5 + tiltY);
             cr.stroke();
             cr.restore();
-        } else {
-            // ── 4. Verified Checkmark (Success Mode) ─────────────────────────
-            cr.setLineWidth(4.5);
+
+            // Expressive Smiling Mouth
+            const mouthY = 9 + tiltY;
+            const mouthIlluminated = waveDist(mouthY) < 9;
+            cr.save();
+            cr.setLineWidth(2.4);
+            cr.setLineCap(Cairo.LineCap.ROUND);
+            if (mouthIlluminated) {
+                cr.setSourceRGBA(0.45, 0.9, 1.0, 0.98 * faceAlpha);
+            } else {
+                cr.setSourceRGBA(1.0, 1.0, 1.0, 0.86 * faceAlpha);
+            }
+            cr.moveTo(-11 + tiltX * 0.7, mouthY);
+            cr.curveTo(-5 + tiltX * 0.7, mouthY + 6.2, 5 + tiltX * 0.7, mouthY + 6.2, 11 + tiltX * 0.7, mouthY);
+            cr.stroke();
+            cr.restore();
+
+            // Radiant Volumetric Wave Sweep (Soft gradient luminous illumination)
+            cr.save();
+            const waveGrad = new Cairo.LinearGradient(0, waveY - 11, 0, waveY + 11);
+            waveGrad.addColorStopRGBA(0, 0.35, 0.82, 1.0, 0.0);
+            waveGrad.addColorStopRGBA(0.5, 0.45, 0.92, 1.0, 0.58 * faceAlpha);
+            waveGrad.addColorStopRGBA(1, 0.35, 0.82, 1.0, 0.0);
+            cr.setSource(waveGrad);
+            cr.setLineWidth(2.6);
+            cr.setLineCap(Cairo.LineCap.ROUND);
+            cr.moveTo(-24, waveY);
+            cr.curveTo(-8, waveY + 2, 8, waveY + 2, 24, waveY);
+            cr.stroke();
+            cr.restore();
+        }
+
+        // ── 3. Verified State: Animated Checkmark & Pulse ───────────────────
+        if (this._isSuccess && this._successProgress > 0.05) {
+            const checkT = Math.min(1.0, (this._successProgress - 0.05) / 0.85);
+            const easeCheck = 1 - Math.pow(1 - checkT, 3);
+
+            const p1 = { x: -14, y: 1 };
+            const p2 = { x: -4, y: 11 };
+            const p3 = { x: 15, y: -8 };
+
+            const len1 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const len2 = Math.hypot(p3.x - p2.x, p3.y - p2.y);
+            const totalLen = len1 + len2;
+            const progressLen = easeCheck * totalLen;
+
+            cr.save();
+            cr.setLineWidth(4.2);
             cr.setLineCap(Cairo.LineCap.ROUND);
             cr.setLineJoin(Cairo.LineJoin.ROUND);
-            cr.setSourceRGBA(0.2, 0.83, 0.55, 1.0);
+            cr.setSourceRGBA(0.20, 0.86, 0.44, 1.0);
 
-            cr.moveTo(-13, 2);
-            cr.lineTo(-4, 11);
-            cr.lineTo(15, -8);
+            cr.moveTo(p1.x, p1.y);
+            if (progressLen <= len1) {
+                const frac = progressLen / len1;
+                cr.lineTo(p1.x + (p2.x - p1.x) * frac, p1.y + (p2.y - p1.y) * frac);
+            } else {
+                cr.lineTo(p2.x, p2.y);
+                const rem = (progressLen - len1) / len2;
+                cr.lineTo(p2.x + (p3.x - p2.x) * rem, p2.y + (p3.y - p2.y) * rem);
+            }
             cr.stroke();
+            cr.restore();
+
+            // Expanding Success Confirmation Ripple
+            if (this._successProgress < 0.9) {
+                const rippleR = 24 + this._successProgress * 28;
+                const rippleAlpha = Math.max(0, (1 - this._successProgress) * 0.45);
+                cr.save();
+                cr.setLineWidth(2.0);
+                cr.setSourceRGBA(0.20, 0.86, 0.44, rippleAlpha);
+                cr.arc(0, 0, rippleR, 0, 2 * Math.PI);
+                cr.stroke();
+                cr.restore();
+            }
         }
 
         cr.restore();
     }
 
     updatePhase() {
-        this._phase += 0.08;
+        if (!this._isSuccess) {
+            this._phase += 0.055;
+        } else {
+            if (this._successProgress < 1.0) {
+                this._successProgress = Math.min(1.0, this._successProgress + 0.035);
+            }
+        }
         this.queue_repaint();
     }
 
     setSuccess(success) {
         this._isSuccess = success;
+        if (!success) {
+            this._successProgress = 0.0;
+        }
         this.queue_repaint();
     }
 });
@@ -156,9 +311,7 @@ class FaceIDContainerV2 extends St.Widget {
     _init() {
         super._init({
             style_class: 'faceid-container',
-            layout_manager: new Clutter.BoxLayout({
-                orientation: Clutter.Orientation.VERTICAL
-            }),
+            layout_manager: new Clutter.BinLayout(),
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             reactive: false,
@@ -166,26 +319,10 @@ class FaceIDContainerV2 extends St.Widget {
 
         this._canvas = new FaceIDCanvasEngineFinal();
         this.add_child(this._canvas);
-
-        this._label = new St.Label({
-            text: 'Face ID',
-            style_class: 'faceid-label',
-            x_align: Clutter.ActorAlign.CENTER,
-        });
-        this.add_child(this._label);
     }
 
     setSuccess(success) {
         this._canvas.setSuccess(success);
-        if (success) {
-            this.add_style_class_name('success');
-            this._label.add_style_class_name('success');
-            this._label.set_text('Verified');
-        } else {
-            this.remove_style_class_name('success');
-            this._label.remove_style_class_name('success');
-            this._label.set_text('Face ID');
-        }
     }
 
     updatePhase() {
@@ -288,12 +425,12 @@ export default class HowdyFaceIDExtension extends Extension {
             });
 
             const monitor = Main.layoutManager.primaryMonitor;
-            const width = 150;
-            const height = 145;
+            const width = 120;
+            const height = 120;
             this._container.set_size(width, height);
 
             const x = monitor.x + Math.round((monitor.width - width) / 2);
-            const y = monitor.y + Main.panel.height + 16;
+            const y = monitor.y + Main.panel.height + 24;
             this._container.set_position(x, y);
 
             this._container.opacity = 0;
@@ -340,7 +477,7 @@ export default class HowdyFaceIDExtension extends Extension {
         if (this._successTimeoutId) {
             GLib.source_remove(this._successTimeoutId);
         }
-        this._successTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
+        this._successTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
             this._successTimeoutId = null;
             this._removeAnimation();
             return GLib.SOURCE_REMOVE;
